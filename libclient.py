@@ -17,6 +17,12 @@ class Message:
         self._jsonheader_len = None
         self.jsonheader = None
         self.response = None
+    
+    def process_events(self, mask):
+        if mask & selectors.EVENT_READ:
+            self.read()
+        if mask & selectors.EVENT_WRITE:
+            self.write()
 
     def _set_selector_events_mask(self, modo):
         '''Faz o selector escutar eventos especificos: leitura, escrita, e leitura e escrita.'''
@@ -47,6 +53,7 @@ class Message:
             print(f"Enviando {self._send_buffer!r} a {self.addr}")
             try:
                 # se está pronto para escrever:
+                #encia dados a socket
                 sent = self.sock.send(self._send_buffer)
             except BlockingIOError:
                 #se está indisponivel
@@ -83,18 +90,21 @@ class Message:
     def _process_response_json_content(self):
         content = self.response
         result = content.get("result")
-        print(f"Resultado obtido: {result}")
-
-    def _process_response_binary_content(self):
-        content = self.response
-        print(f"Resposta obtida: {content!r}")
-
-    def process_events(self, mask):
-        if mask & selectors.EVENT_READ:
-            self.read()
-        if mask & selectors.EVENT_WRITE:
-            self.write()
-
+        print(f"Tradução obtido: {result}")
+    
+    def process_response(self):
+        content_len = self.jsonheader["content-length"]
+        if not len(self._recv_buffer) >= content_len:
+            return
+        data = self._recv_buffer[:content_len]
+        self._recv_buffer = self._recv_buffer[content_len:]
+        if self.jsonheader["content-type"] == "text/json":
+            encoding = self.jsonheader["content-encoding"]
+            self.response = self._json_decode(data, encoding)
+            print(f"Tradução recebida {self.response!r} de {self.addr}")
+            self._process_response_json_content()
+        self.close()
+   
     def read(self):
         self.readBytes()
 
@@ -134,25 +144,17 @@ class Message:
         except OSError as e:
             print(f"Erro!")
         finally:
-            # Delete reference to socket object for garbage collection
             self.sock = None
 
     def queue_request(self):
         content = self.request["content"]
         content_type = self.request["type"]
         content_encoding = self.request["encoding"]
-        if content_type == "text/json":
-            req = {
-                "content_bytes": self._json_encode(content, content_encoding),
-                "content_type": content_type,
-                "content_encoding": content_encoding,
-            }
-        else:
-            req = {
-                "content_bytes": content,
-                "content_type": content_type,
-                "content_encoding": content_encoding,
-            }
+        req = {
+            "content_bytes": self._json_encode(content, content_encoding),
+            "content_type": content_type,
+            "content_encoding": content_encoding,
+        }
         message = self._create_message(**req)
         self._send_buffer += message
         self._request_queued = True
@@ -185,22 +187,4 @@ class Message:
                 if reqhdr not in self.jsonheader:
                     raise ValueError(f"O cabeçalho '{reqhdr}' está faltando.")
 
-    def process_response(self):
-        content_len = self.jsonheader["content-length"]
-        if not len(self._recv_buffer) >= content_len:
-            return
-        data = self._recv_buffer[:content_len]
-        self._recv_buffer = self._recv_buffer[content_len:]
-        if self.jsonheader["content-type"] == "text/json":
-            encoding = self.jsonheader["content-encoding"]
-            self.response = self._json_decode(data, encoding)
-            print(f"Tradução recebida {self.response!r} de {self.addr}")
-            self._process_response_json_content()
-        else:
-            self.response = data
-            print(
-                f"Recebido {self.jsonheader['content-type']} "
-                f"resposta de {self.addr}"
-            )
-            self._process_response_binary_content()
-        self.close()
+   

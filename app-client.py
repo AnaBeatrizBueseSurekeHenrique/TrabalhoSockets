@@ -9,18 +9,11 @@ sel = selectors.DefaultSelector()
 
 
 def create_request(action, value):
-    if action == "search":
-        return dict(
-            type="text/json",
-            encoding="utf-8",
-            content=dict(action=action, value=value),
-        )
-    else:
-        return dict(
-            type="binary/custom-client-binary-type",
-            encoding="binary",
-            content=bytes(action + value, encoding="utf-8"),
-        )
+    return dict(
+        type="text/json",
+        encoding="utf-8",
+        content=dict(action=action, value=value),
+    )
 
 
 def start_connection(host, port, request):
@@ -28,6 +21,7 @@ def start_connection(host, port, request):
     print(f"Iniciando conexão com {addr}")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setblocking(False)
+    #conecta uma socket remota com o endereço, e levanta uma exceção caso algo de errado
     sock.connect_ex(addr)
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     message = libclient.Message(sel, sock, addr, request)
@@ -48,7 +42,7 @@ try:
                 message.process_events(mask)
             except Exception:
                 print(
-                    f"Main: Error: Exception for {message.addr}:\n"
+                    f"Erro! {message.addr}:\n"
                     f"{traceback.format_exc()}"
                 )
                 message.close()

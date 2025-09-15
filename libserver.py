@@ -5,7 +5,7 @@ import json
 import sys
 
 # respostas da busca do cliente!
-request_search = {
+request_translate = {
     "hello": "olá",
     "how": "como",
     "all": "tudo",
@@ -17,7 +17,55 @@ request_search = {
     "I": "eu",
     "am": "estou",
     "fine": "bem",
-    "and": "e"
+    "and": "e",
+    "all": "todo",
+    "call": "chamar",
+    "boy": "menino",
+    "girl": "menina",
+    "book": "livro",
+    "car": "carro",
+    "chair": "cadeira",
+    "children": "crianças",
+    "city": "cidade",
+    "dog": "cachorro",
+    "door": "porta",
+    "enemy": "inimigo",
+    "end": "fim",
+    "enough": "suficient",
+    "eat": "comer",
+    "father": "pai",
+    "friend": "amigo",
+    "go": "ir",
+    "good": "bom",
+    "food": "comida",
+    "hear": "ouvir",
+    "house": "casa",
+    "inside": "dentro",
+    "laugh": "rir",
+    "man": "homem",
+    "woman": "mulher",
+    "name": "nome",
+    "never": "nunca",
+    "new": "novo",
+    "next": "próximo",
+    "noise": "barulho",
+    "often": "frequentemente",
+    "pick": "escolher",
+    "play": "jogar",
+    "room": "comodo",
+    "see": "ver",
+    "sell": "vender",
+    "sister": "irmã",
+    "brother": "irmão",
+    "sit": "sentar",
+    "smile": "sorrir",
+    "speak": "falar",
+    "then": "então",
+    "think": "pensar",
+    "walk": "caminhar",
+    "water": "água",
+    "work": "trabalho",
+    "write": "escrever" 
 }
 #armazena as informacoes necessarias para a troca de mensagens
 class Message:
@@ -43,6 +91,12 @@ class Message:
         #verifica se a mensagem foi criada ou não
         self.response_created = False
         
+    def process_events(self, mask):
+        if mask & selectors.EVENT_READ:
+            self.read()
+        if mask & selectors.EVENT_WRITE:
+            self.write()
+            
     def _set_selector_events_mask(self, modo):
         '''Faz o selector escutar eventos especificos: leitura, escrita, e leitura e escrita.'''
         if modo == 'r':
@@ -84,8 +138,10 @@ class Message:
                 if sent and not self._send_buffer:
                     self.close()
     def read(self): 
-        '''Verica se bytes suficientes foram lidos no buffer de recebimento, se foram os processam, os removem do buffer e escreve o output na variavel'''
+        '''Verica se bytes suficientes foram lidos no buffer de recebimento, se foram ,os processam, 
+        os removem do buffer e escreve o output na variavel'''
         self.readBytes()
+        
         if self._jsonheader_length is None:
             self.process_protoheader()
             
@@ -111,19 +167,19 @@ class Message:
     
     def create_response_json_content(self):
         action = self.request.get("action")
-        if action == "search":
+        if action == "traduzir":
             query = self.request.get("value")
-            answer = request_search.get(query) or f"No match for '{query}'."
-            content = {"result": answer}
+            resposta = request_translate.get(query) or f"Não há tradução para '{query}'."
+            content = {"result": resposta}
         else:
-            content = {"result": f"Error: invalid action '{action}'."}
-        content_encoding = "utf-8"
+            content = {"result": f"erro! Ação inválida '{action}'."}
         response = {
-            "content_bytes": self._json_encode(content, content_encoding),
+            "content_bytes": self._json_encode(content, "utf-8"),
             "content_type": "text/json",
-            "content_encoding": content_encoding,
+            "content_encoding": "utf-8",
         }
         return response
+    
     def _create_message(self, *, content_bytes, content_type, content_encoding):
         jsonheader = {
             "byteorder": sys.byteorder,
@@ -163,11 +219,7 @@ class Message:
                 if reqhdr not in self.jsonheader:
                     raise ValueError(f"O Cabeçalho necessário '{reqhdr}' está faltando!")
     
-    def process_events(self, mask):
-        if mask & selectors.EVENT_READ:
-            self.read()
-        if mask & selectors.EVENT_WRITE:
-            self.write()
+   
     def write(self):
         if self.request:
             if not self.response_created:
@@ -185,37 +237,22 @@ class Message:
             encoding = self.jsonheader["content-encoding"]
             self.request = self._json_decode(data, encoding)
             print(f"Request recebido {self.request!r} de {self.addr}!!")
-        else:
-            #caso o tipo não for texto!
-            self.request = data
-            print(f"Foi recebido um request {self.jsonheader['content-type']} de {self.addr}")
-        self._set_selector_events_mask("w")
+            self._set_selector_events_mask("w")
         
     def create_response(self):
         if self.jsonheader["content-type"] == "text/json":
             response = self.create_response_json_content()
-        else: 
-            #Caso o conteudo for binário ou desconhecido <= tentar apagar
-            response = self.create_response_binary_content()
         message = self._create_message(**response)
         self.response_created = True
         self._send_buffer += message
         
-    def create_response_binary_content(self):
-        response = {
-            "content_bytes": b"10 primeiros bytes de" + self.request[:10],
-            "content_type": "binary/custom-server-binary-type",
-            "content_encoding": "binary",
-        }
-        return response
     
     def close(self):
         print(f"Fechando a conexão com {self.addr}")
         try:
             self.selector.unregister(self.socket)
         except Exception as e:
-            print(f"Erro: exceção à f'{self.addr}: '{e!r}")
-            
+            print(f"Erro: exceção à f'{self.addr}: '{e!r}")    
         try:
             self.socket.close()
         except OSError as e:
