@@ -53,7 +53,7 @@ class Mensagem:
             print(f"Enviando {self._send_buffer!r} a {self.addr}")
             try:
                 # se está pronto para escrever:
-                #encia dados a socket
+                #envia dados a socket
                 sent = self.sock.send(self._send_buffer)
             except BlockingIOError:
                 #se está indisponivel
@@ -83,9 +83,9 @@ class Mensagem:
             "content-length": len(content_bytes),
         }
         jsonheader_bytes = self._json_encode(jsonheader, "utf-8")
-        Mensagem_hdr = struct.pack(">H", len(jsonheader_bytes))
-        Mensagem = Mensagem_hdr + jsonheader_bytes + content_bytes
-        return Mensagem
+        mensagem_hdr = struct.pack(">H", len(jsonheader_bytes))
+        mensagem = mensagem_hdr + jsonheader_bytes + content_bytes
+        return mensagem
 
     def _processar_resposta_conteudo_json(self):
         content = self.response
@@ -130,22 +130,7 @@ class Mensagem:
             if not self._send_buffer:
                 self._set_selector_events_mask("r")
 
-    def close(self):
-        print(f"Fechando conexão com {self.addr}")
-        try:
-            self.selector.unregister(self.sock)
-        except Exception as e:
-            print(
-                f"Erro!"
-            )
-
-        try:
-            self.sock.close()
-        except OSError as e:
-            print(f"Erro!")
-        finally:
-            self.sock = None
-
+   
     def queue_request(self):
         content = self.request["content"]
         content_type = self.request["type"]
@@ -155,8 +140,8 @@ class Mensagem:
             "content_type": content_type,
             "content_encoding": content_encoding,
         }
-        Mensagem = self.criar_mensagem(**req)
-        self._send_buffer += Mensagem
+        mensagem = self.criar_mensagem(**req)
+        self._send_buffer += mensagem
         self._request_queued = True
 
     def process_protoheader(self):
@@ -187,4 +172,18 @@ class Mensagem:
                 if reqhdr not in self.jsonheader:
                     raise ValueError(f"O cabeçalho '{reqhdr}' está faltando.")
 
-   
+    def close(self):
+        print(f"Fechando conexão com {self.addr}")
+        try:
+            self.selector.unregister(self.sock)
+        except Exception as e:
+            print(
+                f"Erro!"
+            )
+
+        try:
+            self.sock.close()
+        except OSError as e:
+            print(f"Erro!")
+        finally:
+            self.sock = None
