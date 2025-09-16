@@ -24,8 +24,8 @@ def start_connection(host, port, request):
     #conecta uma socket remota com o endereço, e levanta uma exceção caso algo de errado
     sock.connect_ex(addr)
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    message = libclient.Message(sel, sock, addr, request)
-    sel.register(sock, events, data=message)
+    mensagem = libclient.Mensagem(sel, sock, addr, request)
+    sel.register(sock, events, data=mensagem)
 
 
 host, port = sys.argv[1], int(sys.argv[2])
@@ -37,15 +37,15 @@ try:
     while True:
         events = sel.select(timeout=1)
         for key, mask in events:
-            message = key.data
+            mensagem = key.data
             try:
-                message.process_events(mask)
+                mensagem.processar_eventos(mask)
             except Exception:
                 print(
-                    f"Erro! {message.addr}:\n"
+                    f"Erro! {mensagem.addr}:\n"
                     f"{traceback.format_exc()}"
                 )
-                message.close()
+                mensagem.close()
         if not sel.get_map():
             break
 except KeyboardInterrupt:

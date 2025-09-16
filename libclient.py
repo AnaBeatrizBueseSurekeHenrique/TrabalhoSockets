@@ -5,7 +5,7 @@ import struct
 import sys
 
 
-class Message:
+class Mensagem:
     def __init__(self, selector, sock, addr, request):
         self.selector = selector
         self.sock = sock
@@ -18,7 +18,7 @@ class Message:
         self.jsonheader = None
         self.response = None
     
-    def process_events(self, mask):
+    def processar_eventos(self, mask):
         if mask & selectors.EVENT_READ:
             self.read()
         if mask & selectors.EVENT_WRITE:
@@ -73,7 +73,7 @@ class Message:
         tiow.close()
         return obj
 
-    def _create_message(
+    def criar_mensagem(
         self, *, content_bytes, content_type, content_encoding
     ):
         jsonheader = {
@@ -83,16 +83,16 @@ class Message:
             "content-length": len(content_bytes),
         }
         jsonheader_bytes = self._json_encode(jsonheader, "utf-8")
-        message_hdr = struct.pack(">H", len(jsonheader_bytes))
-        message = message_hdr + jsonheader_bytes + content_bytes
-        return message
+        Mensagem_hdr = struct.pack(">H", len(jsonheader_bytes))
+        Mensagem = Mensagem_hdr + jsonheader_bytes + content_bytes
+        return Mensagem
 
-    def _process_response_json_content(self):
+    def _processar_resposta_conteudo_json(self):
         content = self.response
         result = content.get("result")
         print(f"Tradução obtido: {result}")
     
-    def process_response(self):
+    def processar_resposta(self):
         content_len = self.jsonheader["content-length"]
         if not len(self._recv_buffer) >= content_len:
             return
@@ -102,7 +102,7 @@ class Message:
             encoding = self.jsonheader["content-encoding"]
             self.response = self._json_decode(data, encoding)
             print(f"Tradução recebida {self.response!r} de {self.addr}")
-            self._process_response_json_content()
+            self._processar_resposta_conteudo_json()
         self.close()
    
     def read(self):
@@ -117,7 +117,7 @@ class Message:
 
         if self.jsonheader:
             if self.response is None:
-                self.process_response()
+                self.processar_resposta()
 
     def write(self):
         #verifica se o request está na fila, se não estiver, o adiciona
@@ -155,8 +155,8 @@ class Message:
             "content_type": content_type,
             "content_encoding": content_encoding,
         }
-        message = self._create_message(**req)
-        self._send_buffer += message
+        Mensagem = self.criar_mensagem(**req)
+        self._send_buffer += Mensagem
         self._request_queued = True
 
     def process_protoheader(self):

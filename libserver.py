@@ -7,7 +7,7 @@ import asyncio
 from deep_translator import GoogleTranslator
 
 #armazena as informacoes necessarias para a troca de mensagens
-class Message:
+class Mensagem:
     def __init__(self, selector, socket, addr):
         '''inicializa a mensagem.'''
         #permite verificar a compleção de entrada e saida em mais de uma socket
@@ -31,7 +31,7 @@ class Message:
         self.response_created = False
     
     
-    def process_events(self, mask):
+    def processar_eventos(self, mask):
         if mask & selectors.EVENT_READ:
             self.read()
         if mask & selectors.EVENT_WRITE:
@@ -105,7 +105,7 @@ class Message:
     def _json_encode(self, obj, encoding):
         return json.dumps(obj, ensure_ascii=False).encode(encoding)
     
-    def create_response_json_content(self):
+    def criar_resposta_conteudo_json(self):
         action = self.request.get("action")
         if action == "traduzir":
             query = self.request.get("value")
@@ -121,7 +121,7 @@ class Message:
         }
         return response
     
-    def _create_message(self, *, content_bytes, content_type, content_encoding):
+    def _criar_mensagem(self, *, content_bytes, content_type, content_encoding):
         jsonheader = {
             "byteorder": sys.byteorder,
             "content-type": content_type,
@@ -164,7 +164,7 @@ class Message:
     def write(self):
         if self.request:
             if not self.response_created:
-                self.create_response()
+                self.criar_resposta()
         self.writeBytes()
     
     def process_request(self): 
@@ -180,10 +180,10 @@ class Message:
             print(f"Request recebido {self.request!r} de {self.addr}!!")
             self._set_selector_events_mask("w")
         
-    def create_response(self):
+    def criar_resposta(self):
         if self.jsonheader["content-type"] == "text/json":
-            response = self.create_response_json_content()
-        message = self._create_message(**response)
+            response = self.criar_resposta_conteudo_json()
+        message = self._criar_mensagem(**response)
         self.response_created = True
         self._send_buffer += message
         

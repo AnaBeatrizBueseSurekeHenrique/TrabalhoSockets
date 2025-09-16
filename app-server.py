@@ -11,8 +11,8 @@ def accept_wrapper(sock):
     conn, addr = sock.accept()
     print(f"Conexão de {addr} foi aceita!")
     conn.setblocking(False)
-    message = libserver.Message(sel, conn, addr)
-    sel.register(conn, selectors.EVENT_READ, data=message)
+    mensagem = libserver.Mensagem(sel, conn, addr)
+    sel.register(conn, selectors.EVENT_READ, data=mensagem)
 
 
 host, port = sys.argv[1], int(sys.argv[2])
@@ -32,14 +32,14 @@ try:
             if key.data is None:
                 accept_wrapper(key.fileobj)
             else:
-                message = key.data
+                mensagem = key.data
                 try:
-                    message.process_events(mask)
+                    mensagem.processar_eventos(mask)
                 except Exception:
                     print(
-                        f"Erro!{message.addr}"
+                        f"Erro!{mensagem.addr}"
                     )
-                    message.close()
+                    mensagem.close()
 except KeyboardInterrupt:
     print("Teclado Interrompeu!")
 finally:
