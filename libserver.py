@@ -3,70 +3,9 @@ import struct
 import io
 import json
 import sys
+import asyncio
+from deep_translator import GoogleTranslator
 
-# respostas da busca do cliente!
-request_translate = {
-    "hello": "olá",
-    "how": "como",
-    "all": "tudo",
-    "yes": "sim",
-    "no": "não",
-    "maybe": "talvez",
-    "are": "está",
-    "you": "você",
-    "I": "eu",
-    "am": "estou",
-    "fine": "bem",
-    "and": "e",
-    "all": "todo",
-    "call": "chamar",
-    "boy": "menino",
-    "girl": "menina",
-    "book": "livro",
-    "car": "carro",
-    "chair": "cadeira",
-    "children": "crianças",
-    "city": "cidade",
-    "dog": "cachorro",
-    "door": "porta",
-    "enemy": "inimigo",
-    "end": "fim",
-    "enough": "suficient",
-    "eat": "comer",
-    "father": "pai",
-    "friend": "amigo",
-    "go": "ir",
-    "good": "bom",
-    "food": "comida",
-    "hear": "ouvir",
-    "house": "casa",
-    "inside": "dentro",
-    "laugh": "rir",
-    "man": "homem",
-    "woman": "mulher",
-    "name": "nome",
-    "never": "nunca",
-    "new": "novo",
-    "next": "próximo",
-    "noise": "barulho",
-    "often": "frequentemente",
-    "pick": "escolher",
-    "play": "jogar",
-    "room": "comodo",
-    "see": "ver",
-    "sell": "vender",
-    "sister": "irmã",
-    "brother": "irmão",
-    "sit": "sentar",
-    "smile": "sorrir",
-    "speak": "falar",
-    "then": "então",
-    "think": "pensar",
-    "walk": "caminhar",
-    "water": "água",
-    "work": "trabalho",
-    "write": "escrever" 
-}
 #armazena as informacoes necessarias para a troca de mensagens
 class Message:
     def __init__(self, selector, socket, addr):
@@ -90,7 +29,8 @@ class Message:
         self.request = None
         #verifica se a mensagem foi criada ou não
         self.response_created = False
-        
+    
+    
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
             self.read()
@@ -169,7 +109,8 @@ class Message:
         action = self.request.get("action")
         if action == "traduzir":
             query = self.request.get("value")
-            resposta = request_translate.get(query) or f"Não há tradução para '{query}'."
+            translator = GoogleTranslator(source='auto', target='pt')
+            resposta =  translator.translate(query)
             content = {"result": resposta}
         else:
             content = {"result": f"erro! Ação inválida '{action}'."}
@@ -259,4 +200,5 @@ class Message:
             print(f"Erro! exceção de socket.close() para {self.addr} : {e!r}")
         finally:
             self.socket = None
-    
+            
+   
